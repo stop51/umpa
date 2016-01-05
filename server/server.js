@@ -316,7 +316,7 @@ app.post('/makeNewVote', function (req, res) {
         ComparisonOperator: 'EQ',
         AttributeValueList: [
           {
-            S: req.body.askerId
+            S: index
           }
         ]
       }
