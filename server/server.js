@@ -79,10 +79,15 @@ app.post('/makeNewAsk', function (req, res) {
   });
 });
 
-app.post('/getNewAsks', function (req, res) {
+app.get('/getNewAsks', function (req, res) {
   var language = "*";
   // FIXME : '*' is used for temporary, we should change this value to proper languge client sent.
   //         req.headers["accept-language"].split(',')[0].toLowerCase();
+//  var curDate = req.body.date;
+//  var curAskerId = req.body.askerId;
+  var curDate = "1452512855395"
+  var curAskerId = "834827176637705"
+
   var params = {
     TableName: 'yesno',
     IndexName: 'language-date-index',
@@ -100,7 +105,7 @@ app.post('/getNewAsks', function (req, res) {
         ComparisonOperator: 'LE',
         AttributeValueList: [
           {
-            S: req.body.date,
+            S: curDate,
           }
         ],
       },
@@ -118,9 +123,60 @@ app.post('/getNewAsks', function (req, res) {
       console.log(data); // successful response
       for (var i in data.Items) {
          i = data.Items[i];
-         console.log(i.mainContent);
-         console.log(i.yesContent);
+         console.log(i.date);
       }
+      res.json(data);
+    }
+  });
+
+  console.log("get my index start");
+  var params = {
+    TableName: 'yesnoPoll',
+    IndexName: 'userid-date-index',
+    KeyConditions: { // indexed attributes to query
+                     // must include the hash key value of the table or index
+      userid: {
+        ComparisonOperator: 'EQ',
+        AttributeValueList: [
+          {
+            S: curAskerId,
+          }
+        ]
+      },
+      date: {
+        ComparisonOperator: 'LE',
+        AttributeValueList: [
+          {
+            S: curDate,
+          }
+        ],
+      }
+    }
+  };
+  dynamodb.query(params, function(err, polldata) {
+    if (err){
+      console.log(err); // an error occurred
+      res.json(err);
+      return;
+    }
+    else {
+      console.log(polldata); // successful response
+      for (var i in polldata.Items) {
+         i = polldata.Items[i];
+         console.log(i.index);
+         for(var j in data.Items) {
+           j = data.Items[j];
+           var curItem = JSON.stringify(j);
+           if(curItem.indexOf(JSON.stringify(i.index)) !== -1 ) {
+             var yesnoData = JSON.stringify(i.yes_no);
+             if(yesnoData.indexOf("1") !== -1)
+               data.Items[j]["voted"] = "yes";
+             else
+               data.Items[j]["voted"] = "no";
+           }
+         }
+      }
+      console.log(data);
       res.json(data);
     }
   });
@@ -345,7 +401,7 @@ app.post('/makeNewVote', function (req, res) {
   });
 });
 
-var server = app.listen(5000, function () {
+var server = app.listen(6002, function () {
   var host = server.address().address;
   var port = server.address().port;
   console.log('Example app listening at http://%s:%s', host, port);
